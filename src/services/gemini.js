@@ -78,7 +78,14 @@ ${pass1Result}
     return JSON.parse(interaction2.output_text);
   } catch (error) {
     console.error("Gemini API Error:", error);
-    throw error;
+    if (error.status === 429 || error.message?.includes('429')) {
+      throw new Error("API 請求次數達上限 (429 TooManyRequests)。請稍等 10 到 30 秒後再重試！");
+    } else if (error.status === 500 || error.message?.includes('500')) {
+      throw new Error("Google AI 伺服器目前發生異常 (500 InternalServerError)，這通常是暫時的，請稍後再試！");
+    } else if (error.message?.includes('JSON')) {
+      throw new Error("AI 無法正確辨識圖片中的文字或題目，請嘗試靠近一點或在光線充足處重新拍攝！");
+    }
+    throw new Error(error.message || "解析失敗，請稍後重試。");
   }
 }
 
@@ -142,6 +149,9 @@ export async function chatWithAI(mistake, messages, onUpdateSolution) {
     return interaction.output_text;
   } catch (error) {
     console.error("Chat Error:", error);
-    throw error;
+    if (error.status === 429 || error.message?.includes('429')) {
+      throw new Error("對話頻率過高 (429 TooManyRequests)，請稍等 10 秒後再傳送訊息！");
+    }
+    throw new Error(error.message || "對話失敗，請稍後重試。");
   }
 }

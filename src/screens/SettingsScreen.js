@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { getColorRules, addColorRule, deleteColorRule } from '../db/database';
+import { useSQLiteContext } from 'expo-sqlite';
 
 export default function SettingsScreen() {
+  const db = useSQLiteContext();
   const [rules, setRules] = useState([]);
   const [subject, setSubject] = useState('');
   const [color, setColor] = useState('');
@@ -14,7 +16,7 @@ export default function SettingsScreen() {
 
   const loadRules = async () => {
     try {
-      const data = await getColorRules();
+      const data = await getColorRules(db);
       setRules(data);
     } catch (error) {
       console.error(error);
@@ -27,7 +29,7 @@ export default function SettingsScreen() {
       return;
     }
     try {
-      await addColorRule(subject, color, action);
+      await addColorRule(db, subject, color, action);
       setSubject('');
       setColor('');
       setAction('');
@@ -39,7 +41,7 @@ export default function SettingsScreen() {
 
   const handleDelete = async (id) => {
     try {
-      await deleteColorRule(id);
+      await deleteColorRule(db, id);
       loadRules();
     } catch (error) {
       Alert.alert('錯誤', error.message);

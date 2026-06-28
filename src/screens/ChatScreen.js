@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Alert } 
 import { chatWithAI } from '../services/gemini';
 import { updateMistakeSolution } from '../db/database';
 import Markdown from 'react-native-markdown-display';
+import { useSQLiteContext } from 'expo-sqlite';
 
 export default function ChatScreen({ route, navigation }) {
+  const db = useSQLiteContext();
   const { mistakeId, mistake } = route.params;
   const [messages, setMessages] = useState([
     { id: '1', role: 'model', text: '您好！關於這題錯題，您有什麼想討論或不清楚的地方嗎？' }
@@ -22,7 +24,7 @@ export default function ChatScreen({ route, navigation }) {
 
     try {
       const response = await chatWithAI(mistake, newMessages, async (newSolution) => {
-        await updateMistakeSolution(mistakeId, newSolution);
+        await updateMistakeSolution(db, mistakeId, newSolution);
         mistake.solution = newSolution;
         Alert.alert('已更新', '錯題的解答已經根據討論更新！');
       });

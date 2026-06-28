@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Alert } from
 import { getMistakes } from '../db/database';
 import { useIsFocused } from '@react-navigation/native';
 import { exportToPDF, exportToWord } from '../utils/exportTools';
+import { useSQLiteContext } from 'expo-sqlite';
 
 export default function MistakeListScreen({ navigation }) {
+  const db = useSQLiteContext();
   const [mistakes, setMistakes] = useState([]);
   const isFocused = useIsFocused();
 
@@ -16,7 +18,7 @@ export default function MistakeListScreen({ navigation }) {
 
   const loadMistakes = async () => {
     try {
-      const data = await getMistakes();
+      const data = await getMistakes(db);
       setMistakes(data);
     } catch (error) {
       console.error(error);

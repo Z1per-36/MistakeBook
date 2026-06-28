@@ -5,8 +5,10 @@ import Markdown from 'react-native-markdown-display';
 import { addMistake, getColorRules } from '../db/database';
 
 import * as FileSystem from 'expo-file-system/legacy';
+import { useSQLiteContext } from 'expo-sqlite';
 
 export default function PreviewScreen({ route, navigation }) {
+  const db = useSQLiteContext();
   const { imageUri } = route.params;
   const [analyzing, setAnalyzing] = useState(true);
   const [result, setResult] = useState(null);
@@ -15,7 +17,7 @@ export default function PreviewScreen({ route, navigation }) {
   useEffect(() => {
     const processImage = async () => {
       try {
-        const rules = await getColorRules();
+        const rules = await getColorRules(db);
         const base64Image = await FileSystem.readAsStringAsync(imageUri, { encoding: 'base64' });
         const response = await analyzeMistakeImage(base64Image, rules);
         setResult(response);
@@ -31,7 +33,7 @@ export default function PreviewScreen({ route, navigation }) {
   const handleSave = async () => {
     if (!result) return;
     try {
-      await addMistake(result.subject, result.question, result.solution, imageUri);
+      await addMistake(db, result.subject, result.question, result.solution, imageUri);
       Alert.alert('成功', '錯題已儲存到您的錯題本！');
       navigation.popToTop();
     } catch (e) {
