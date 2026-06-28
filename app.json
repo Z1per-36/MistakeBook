@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "MistakeBook",
-    "slug": "MistakeBook",
+    "slug": "mistakebook",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,6 +10,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.z1persteam.mistakebook",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -19,6 +20,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "45610c65-7d7f-47cb-9e32-1f84c630fc5b"
+      }
+    },
+    "owner": "z1pers-team"
   }
 }
