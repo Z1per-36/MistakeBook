@@ -2,6 +2,12 @@
 
 MistakeBook 是一款由 AI 驅動的智慧錯題本 App，專為學生與考生設計。它結合了原生的文件掃描器與強大的 Google Gemini API，能夠自動將實體錯題數位化，並提供最精準的 AI 解答與後續問答討論。
 
+## 📥 下載與安裝 (Download)
+
+👉 **[點擊這裡前往 Releases 頁面下載最新版 APK 安裝檔](../../releases/latest)** 
+
+*(下載後請在 Android 手機上直接開啟並允許安裝未知來源應用程式)*
+
 ## 🌟 核心特色 (Features)
 
 - **智慧文件掃描 (Smart Document Scanner)**
