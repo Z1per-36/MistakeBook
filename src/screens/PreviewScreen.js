@@ -4,7 +4,7 @@ import { analyzeMistakeImage } from '../services/gemini';
 import Markdown from 'react-native-markdown-display';
 import { addMistake, getColorRules } from '../db/database';
 
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 export default function PreviewScreen({ route, navigation }) {
   const { imageUri } = route.params;
