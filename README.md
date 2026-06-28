@@ -11,7 +11,7 @@ MistakeBook 是一款由 AI 驅動的智慧錯題本 App，專為學生與考生
 ## 🌟 核心特色 (Features)
 
 - **智慧文件掃描 (Smart Document Scanner)**
-  - 內建媲美 vflat 的原生掃描器。
+  - 內建原生掃描器。
   - 支援自動邊緣偵測、視角攤平以及去除陰影，確保錯題圖片清晰無比。
 - **AI 雙重查證機制 (2-Pass Verification)**
   - 整合 Google Gemini 3.5 Flash 視覺大模型。
