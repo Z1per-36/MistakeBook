@@ -20,7 +20,8 @@ export async function analyzeMistakeImage(base64Image, colorRules = []) {
 
 嚴格指令：
 1. 針對形音義、簡單單字等基礎題型，不要給多餘解釋，直接給答案。
-2. 解答必須簡潔清晰。${rulesText}
+2. 解答必須簡潔清晰。
+3. **圖片中可能會有學生之前寫錯的手寫答案或筆跡痕跡。請「完全忽略」任何手寫的解答，不要把它們當作正確答案，請務必基於您的專業知識，給出真正正確的標準解答。**${rulesText}
 
 請「僅」回傳一個 JSON 格式，包含以下欄位：
 {
@@ -50,6 +51,8 @@ export async function analyzeMistakeImage(base64Image, colorRules = []) {
     const pass2Prompt = `
 以下是我剛剛初步萃取與解答的結果，請您扮演「嚴格審查員」再次檢查圖片與這份初步結果。
 請揪出：文字是否誤判 (特別是 OCR 容易錯的字)、解題邏輯是否有錯、計算是否正確。
+
+特別注意：**圖片中可能有學生手寫的錯誤答案，請絕對不要把學生的錯誤手寫答案當作最終的標準解答！請提供客觀正確的解答。**
 
 初步結果：
 ${pass1Result}

@@ -1,7 +1,17 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
-// import { Document, Packer, Paragraph, TextRun } from 'docx';
+import { Document, Packer, Paragraph, TextRun, ImageRun } from 'docx';
+
+const getFormattedDate = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${year}${month}${day}_${hours}${minutes}`;
+};
 
 export const exportToPDF = async (mistakes) => {
   try {
@@ -11,39 +21,34 @@ export const exportToPDF = async (mistakes) => {
           <meta charset="utf-8">
           <style>
             body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #333; }
-            h1 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 30px; }
-            .mistake { margin-bottom: 40px; page-break-inside: avoid; border: 1px solid #eaeaea; padding: 15px; border-radius: 8px; }
-            .subject { font-size: 18px; font-weight: bold; color: #000; margin-bottom: 10px; display: inline-block; background: #eee; padding: 4px 8px; border-radius: 4px; }
-            .question { font-size: 16px; margin-bottom: 15px; font-weight: bold; }
-            .solution { background: #fafafa; padding: 15px; border-left: 4px solid #000; margin-bottom: 15px; }
-            .solution p { margin: 0; line-height: 1.6; }
-            img { max-width: 100%; max-height: 350px; display: block; margin: 10px auto; border-radius: 4px; }
+            .mistake { margin-bottom: 60px; page-break-inside: avoid; }
+            .question { font-size: 16px; margin-bottom: 20px; line-height: 1.8; }
+            img { max-width: 100%; max-height: 250px; display: block; margin: 10px 0; border-radius: 4px; }
           </style>
         </head>
         <body>
-          <h1>My Mistake Book</h1>
     `;
 
-    for (const mistake of mistakes) {
-      // In Expo Print, local file:// URIs usually work directly in img tags
+    mistakes.forEach((mistake, index) => {
       htmlContent += `
         <div class="mistake">
-          <div class="subject">${mistake.subject}</div>
-          <div class="question">${mistake.question}</div>
-          <div class="solution">
-            <p>${mistake.solution ? mistake.solution.replace(/\n/g, '<br>') : 'No solution provided.'}</p>
-          </div>
+          <div class="question">(   ) ${index + 1}. ${mistake.question.replace(/\n/g, '<br>')}</div>
           ${mistake.image_uri ? `<img src="${mistake.image_uri}" />` : ''}
         </div>
       `;
-    }
+    });
 
     htmlContent += `</body></html>`;
 
     const { uri } = await Print.printToFileAsync({ html: htmlContent });
     
+    // Rename file
+    const filename = `錯題複習卷_${getFormattedDate()}.pdf`;
+    const newUri = `${FileSystem.documentDirectory}${filename}`;
+    await FileSystem.moveAsync({ from: uri, to: newUri });
+    
     if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+      await Sharing.shareAsync(newUri, { UTI: '.pdf', mimeType: 'application/pdf' });
     }
   } catch (error) {
     console.error("PDF Export Error:", error);
@@ -53,25 +58,43 @@ export const exportToPDF = async (mistakes) => {
 
 export const exportToWord = async (mistakes) => {
   try {
-    /*
-    const children = [
-      new Paragraph({
-        children: [
-          new TextRun({ text: "My Mistake Book", bold: true, size: 36 })
-        ]
-      })
-    ];
+    const children = [];
 
-    for (const m of mistakes) {
-      children.push(new Paragraph({ text: "" })); // spacing
+    for (let i = 0; i < mistakes.length; i++) {
+      const m = mistakes[i];
+      const qText = `(   ) ${i + 1}. ${m.question}`;
+      
       children.push(new Paragraph({
         children: [
-          new TextRun({ text: `[${m.subject}]`, bold: true, size: 28 })
-        ]
+          new TextRun({ text: qText, size: 24 }) // size 24 = 12pt
+        ],
+        spacing: { after: 400 } // spacing after question
       }));
-      children.push(new Paragraph({ text: `Question: ${m.question}` }));
-      children.push(new Paragraph({ text: `Solution: ${m.solution}` }));
-      children.push(new Paragraph({ text: "----------------------------------------" }));
+
+      if (m.image_uri) {
+        try {
+          const base64Data = await FileSystem.readAsStringAsync(m.image_uri, { encoding: 'base64' });
+          children.push(new Paragraph({
+            children: [
+              new ImageRun({
+                data: Uint8Array.from(atob(base64Data), c => c.charCodeAt(0)),
+                transformation: {
+                  width: 400,
+                  height: 300
+                }
+              })
+            ],
+            spacing: { after: 400 }
+          }));
+        } catch (imgError) {
+          console.log("Failed to add image to word doc", imgError);
+        }
+      }
+
+      // Add blank space for student to write answers
+      for(let j=0; j<3; j++){
+        children.push(new Paragraph({ text: "" }));
+      }
     }
 
     const doc = new Document({
@@ -79,14 +102,13 @@ export const exportToWord = async (mistakes) => {
     });
 
     const base64 = await Packer.toBase64String(doc);
-    const uri = FileSystem.documentDirectory + "Mistakes.docx";
+    const filename = `錯題複習卷_${getFormattedDate()}.docx`;
+    const uri = FileSystem.documentDirectory + filename;
     await FileSystem.writeAsStringAsync(uri, base64, { encoding: FileSystem.EncodingType.Base64 });
 
     if (await Sharing.isAvailableAsync()) {
       await Sharing.shareAsync(uri, { UTI: '.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
     }
-    */
-    console.log("Word export temporarily disabled");
   } catch (error) {
     console.error("Word Export Error:", error);
     throw error;
