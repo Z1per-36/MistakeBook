@@ -21,7 +21,7 @@ export const exportToPDF = async (mistakes, includeSolution = false) => {
           <meta charset="utf-8">
           <style>
             body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #333; }
-            .mistake { margin-bottom: 60px; page-break-inside: avoid; }
+            .mistake { margin-bottom: 120px; page-break-inside: avoid; }
             .question { font-size: 16px; margin-bottom: 20px; line-height: 1.8; }
             .solution { background: #fafafa; padding: 15px; border-left: 4px solid #2ecc71; margin-top: 20px; margin-bottom: 15px; }
             .solution p { margin: 0; line-height: 1.6; color: #27ae60; }
@@ -113,11 +113,11 @@ export const exportToWord = async (mistakes, includeSolution = false) => {
           children: [
             new TextRun({ text: m.solution, color: "2c3e50", size: 22 })
           ],
-          spacing: { after: 400 }
+          spacing: { after: 800 } // Larger spacing after solution
         }));
       } else {
-        // Add blank space for student to write answers only if no solution is provided
-        for(let j=0; j<3; j++){
+        // Add larger blank space for student to write answers
+        for(let j=0; j<5; j++){
           children.push(new Paragraph({ text: "" }));
         }
       }
