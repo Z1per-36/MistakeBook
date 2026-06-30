@@ -13,7 +13,7 @@ const getFormattedDate = () => {
   return `${year}${month}${day}_${hours}${minutes}`;
 };
 
-export const exportToPDF = async (mistakes) => {
+export const exportToPDF = async (mistakes, includeSolution = false) => {
   try {
     let htmlContent = `
       <html>
@@ -23,6 +23,9 @@ export const exportToPDF = async (mistakes) => {
             body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #333; }
             .mistake { margin-bottom: 60px; page-break-inside: avoid; }
             .question { font-size: 16px; margin-bottom: 20px; line-height: 1.8; }
+            .solution { background: #fafafa; padding: 15px; border-left: 4px solid #2ecc71; margin-top: 20px; margin-bottom: 15px; }
+            .solution p { margin: 0; line-height: 1.6; color: #27ae60; }
+            .solution-title { font-weight: bold; margin-bottom: 8px; color: #2ecc71; }
             img { max-width: 100%; max-height: 250px; display: block; margin: 10px 0; border-radius: 4px; }
           </style>
         </head>
@@ -34,6 +37,12 @@ export const exportToPDF = async (mistakes) => {
         <div class="mistake">
           <div class="question">(   ) ${index + 1}. ${mistake.question.replace(/\n/g, '<br>')}</div>
           ${mistake.image_uri ? `<img src="${mistake.image_uri}" />` : ''}
+          ${includeSolution && mistake.solution ? `
+            <div class="solution">
+              <div class="solution-title">【解答與解析】</div>
+              <p>${mistake.solution.replace(/\n/g, '<br>')}</p>
+            </div>
+          ` : ''}
         </div>
       `;
     });
@@ -43,7 +52,8 @@ export const exportToPDF = async (mistakes) => {
     const { uri } = await Print.printToFileAsync({ html: htmlContent });
     
     // Rename file
-    const filename = `錯題複習卷_${getFormattedDate()}.pdf`;
+    const modeName = includeSolution ? '含解答' : '練習卷';
+    const filename = `錯題複習卷_${modeName}_${getFormattedDate()}.pdf`;
     const newUri = `${FileSystem.documentDirectory}${filename}`;
     await FileSystem.moveAsync({ from: uri, to: newUri });
     
@@ -56,7 +66,7 @@ export const exportToPDF = async (mistakes) => {
   }
 };
 
-export const exportToWord = async (mistakes) => {
+export const exportToWord = async (mistakes, includeSolution = false) => {
   try {
     const children = [];
 
@@ -68,7 +78,7 @@ export const exportToWord = async (mistakes) => {
         children: [
           new TextRun({ text: qText, size: 24 }) // size 24 = 12pt
         ],
-        spacing: { after: 400 } // spacing after question
+        spacing: { after: 200 }
       }));
 
       if (m.image_uri) {
@@ -84,16 +94,32 @@ export const exportToWord = async (mistakes) => {
                 }
               })
             ],
-            spacing: { after: 400 }
+            spacing: { after: 200 }
           }));
         } catch (imgError) {
           console.log("Failed to add image to word doc", imgError);
         }
       }
 
-      // Add blank space for student to write answers
-      for(let j=0; j<3; j++){
-        children.push(new Paragraph({ text: "" }));
+      if (includeSolution && m.solution) {
+        children.push(new Paragraph({
+          children: [
+            new TextRun({ text: "【解答與解析】", bold: true, color: "27ae60", size: 22 })
+          ],
+          spacing: { before: 100, after: 100 }
+        }));
+        
+        children.push(new Paragraph({
+          children: [
+            new TextRun({ text: m.solution, color: "2c3e50", size: 22 })
+          ],
+          spacing: { after: 400 }
+        }));
+      } else {
+        // Add blank space for student to write answers only if no solution is provided
+        for(let j=0; j<3; j++){
+          children.push(new Paragraph({ text: "" }));
+        }
       }
     }
 
@@ -102,7 +128,8 @@ export const exportToWord = async (mistakes) => {
     });
 
     const base64 = await Packer.toBase64String(doc);
-    const filename = `錯題複習卷_${getFormattedDate()}.docx`;
+    const modeName = includeSolution ? '含解答' : '練習卷';
+    const filename = `錯題複習卷_${modeName}_${getFormattedDate()}.docx`;
     const uri = FileSystem.documentDirectory + filename;
     await FileSystem.writeAsStringAsync(uri, base64, { encoding: FileSystem.EncodingType.Base64 });
 

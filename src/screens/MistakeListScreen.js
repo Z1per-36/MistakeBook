@@ -44,24 +44,58 @@ export default function MistakeListScreen({ navigation }) {
     }
   };
 
-  const handleExportPDF = async () => {
+  const handleExportPDF = () => {
     const itemsToExport = mistakes.filter(m => selectedIds.has(m.id));
     if (itemsToExport.length === 0) return Alert.alert('提示', '請先勾選要匯出的錯題。');
-    try {
-      await exportToPDF(itemsToExport);
-    } catch (error) {
-      Alert.alert('匯出錯誤', error.message);
-    }
+    
+    Alert.alert(
+      '選擇匯出格式',
+      '請選擇您要匯出的考卷類型：',
+      [
+        { 
+          text: '僅題目 (練習用)', 
+          onPress: async () => {
+            try { await exportToPDF(itemsToExport, false); } 
+            catch (error) { Alert.alert('匯出錯誤', error.message); }
+          }
+        },
+        { 
+          text: '包含解答 (複習用)', 
+          onPress: async () => {
+            try { await exportToPDF(itemsToExport, true); } 
+            catch (error) { Alert.alert('匯出錯誤', error.message); }
+          }
+        },
+        { text: '取消', style: 'cancel' },
+      ]
+    );
   };
 
-  const handleExportWord = async () => {
+  const handleExportWord = () => {
     const itemsToExport = mistakes.filter(m => selectedIds.has(m.id));
     if (itemsToExport.length === 0) return Alert.alert('提示', '請先勾選要匯出的錯題。');
-    try {
-      await exportToWord(itemsToExport);
-    } catch (error) {
-      Alert.alert('匯出錯誤', error.message);
-    }
+    
+    Alert.alert(
+      '選擇匯出格式',
+      '請選擇您要匯出的考卷類型：',
+      [
+        { 
+          text: '僅題目 (練習用)', 
+          onPress: async () => {
+            try { await exportToWord(itemsToExport, false); } 
+            catch (error) { Alert.alert('匯出錯誤', error.message); }
+          }
+        },
+        { 
+          text: '包含解答 (複習用)', 
+          onPress: async () => {
+            try { await exportToWord(itemsToExport, true); } 
+            catch (error) { Alert.alert('匯出錯誤', error.message); }
+          }
+        },
+        { text: '取消', style: 'cancel' },
+      ]
+    );
   };
 
   const renderItem = ({ item }) => {
