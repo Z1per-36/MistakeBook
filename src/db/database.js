@@ -17,9 +17,19 @@ export const initializeDatabase = async (db) => {
         question TEXT,
         solution TEXT,
         image_uri TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        is_exported INTEGER DEFAULT 0
       );
     `);
+    
+    // Safety check: Alter table to add is_exported if upgrading from old version
+    try {
+      await db.execAsync(`ALTER TABLE mistakes ADD COLUMN is_exported INTEGER DEFAULT 0;`);
+      console.log("Added is_exported column to existing mistakes table");
+    } catch (e) {
+      // Column might already exist, ignore
+    }
+
     console.log("Database initialized successfully via Provider");
   } catch (error) {
     console.error("Database initialization failed", error);
@@ -58,4 +68,16 @@ export const getMistakes = async (db) => {
 
 export const updateMistakeSolution = async (db, id, newSolution) => {
   await db.runAsync('UPDATE mistakes SET solution = ? WHERE id = ?', newSolution, id);
+};
+
+export const deleteMistakes = async (db, ids) => {
+  if (!ids || ids.length === 0) return;
+  const placeholders = ids.map(() => '?').join(',');
+  await db.runAsync(`DELETE FROM mistakes WHERE id IN (${placeholders})`, ...ids);
+};
+
+export const markMistakesAsExported = async (db, ids) => {
+  if (!ids || ids.length === 0) return;
+  const placeholders = ids.map(() => '?').join(',');
+  await db.runAsync(`UPDATE mistakes SET is_exported = 1 WHERE id IN (${placeholders})`, ...ids);
 };
