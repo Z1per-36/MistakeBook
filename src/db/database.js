@@ -21,13 +21,12 @@ export const initializeDatabase = async (db) => {
         is_exported INTEGER DEFAULT 0
       );
     `);
-    
     // Safety check: Alter table to add is_exported if upgrading from old version
-    try {
+    const tableInfo = await db.getAllAsync(`PRAGMA table_info(mistakes)`);
+    const hasIsExported = tableInfo.some(column => column.name === 'is_exported');
+    if (!hasIsExported) {
       await db.execAsync(`ALTER TABLE mistakes ADD COLUMN is_exported INTEGER DEFAULT 0;`);
       console.log("Added is_exported column to existing mistakes table");
-    } catch (e) {
-      // Column might already exist, ignore
     }
 
     console.log("Database initialized successfully via Provider");
