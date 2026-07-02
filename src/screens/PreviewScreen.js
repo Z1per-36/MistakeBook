@@ -33,7 +33,7 @@ export default function PreviewScreen({ route, navigation }) {
   const handleSave = async () => {
     if (!result) return;
     try {
-      await addMistake(db, result.subject, result.question, result.solution, imageUri);
+      await addMistake(db, result.subject, result.question, result.answer, result.solution, imageUri, result.needs_image);
       Alert.alert('成功', '錯題已儲存到您的錯題本！');
       navigation.popToTop();
     } catch (e) {
@@ -68,6 +68,18 @@ export default function PreviewScreen({ route, navigation }) {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>科目</Text>
         <Text style={styles.cardContent}>{result?.subject}</Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>正確答案</Text>
+        <Text style={styles.cardContent}>{result?.answer}</Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>匯出選項</Text>
+        <Text style={styles.cardContent}>
+          {result?.needs_image ? "✅ 含有圖片題，匯出時將附上原圖" : "📝 純文字題，匯出時不附圖片"}
+        </Text>
       </View>
 
       <View style={styles.card}>

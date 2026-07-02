@@ -13,7 +13,7 @@ const getFormattedDate = () => {
   return `${year}${month}${day}_${hours}${minutes}`;
 };
 
-export const exportToPDF = async (mistakes, includeSolution = false) => {
+export const exportToPDF = async (mistakes, includeSolution = false, fontSize = 16) => {
   try {
     let htmlContent = `
       <html>
@@ -22,30 +22,40 @@ export const exportToPDF = async (mistakes, includeSolution = false) => {
           <style>
             body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #333; }
             .mistake { margin-bottom: 120px; page-break-inside: avoid; }
-            .question { font-size: 16px; margin-bottom: 20px; line-height: 1.8; }
-            .solution { background: #fafafa; padding: 15px; border-left: 4px solid #2ecc71; margin-top: 20px; margin-bottom: 15px; }
-            .solution p { margin: 0; line-height: 1.6; color: #27ae60; }
-            .solution-title { font-weight: bold; margin-bottom: 8px; color: #2ecc71; }
+            .question { font-size: ${fontSize}px; margin-bottom: 20px; line-height: 1.8; }
+            .solution { background: #fafafa; padding: 15px; margin-top: 20px; margin-bottom: 15px; }
+            .solution p { margin: 0; font-size: ${fontSize}px; line-height: 1.6; color: #e74c3c; }
             img { max-width: 100%; max-height: 250px; display: block; margin: 10px 0; border-radius: 4px; }
           </style>
         </head>
         <body>
     `;
 
-    mistakes.forEach((mistake, index) => {
+    for (let i = 0; i < mistakes.length; i++) {
+      const mistake = mistakes[i];
+      let imgTag = '';
+      if (mistake.image_uri && mistake.needs_image) {
+        try {
+          const base64Data = await FileSystem.readAsStringAsync(mistake.image_uri, { encoding: 'base64' });
+          imgTag = `<img src="data:image/jpeg;base64,${base64Data}" />`;
+        } catch (imgError) {
+          console.error("PDF image load error", imgError);
+        }
+      }
+
+      const displayAnswer = (includeSolution && mistake.answer) ? ` ${mistake.answer} ` : '      ';
       htmlContent += `
         <div class="mistake">
-          <div class="question">(   ) ${index + 1}. ${mistake.question.replace(/\n/g, '<br>')}</div>
-          ${mistake.image_uri ? `<img src="${mistake.image_uri}" />` : ''}
+          <div class="question">(${displayAnswer}) ${i + 1}. ${mistake.question.replace(/\n/g, '<br>')}</div>
+          ${imgTag}
           ${includeSolution && mistake.solution ? `
             <div class="solution">
-              <div class="solution-title">【解答與解析】</div>
               <p>${mistake.solution.replace(/\n/g, '<br>')}</p>
             </div>
           ` : ''}
         </div>
       `;
-    });
+    }
 
     htmlContent += `</body></html>`;
 
@@ -66,22 +76,24 @@ export const exportToPDF = async (mistakes, includeSolution = false) => {
   }
 };
 
-export const exportToWord = async (mistakes, includeSolution = false) => {
+export const exportToWord = async (mistakes, includeSolution = false, fontSize = 16) => {
   try {
     const children = [];
+    const docxSize = fontSize * 2; // docx uses half-points
 
     for (let i = 0; i < mistakes.length; i++) {
       const m = mistakes[i];
-      const qText = `(   ) ${i + 1}. ${m.question}`;
+      const displayAnswer = (includeSolution && m.answer) ? ` ${m.answer} ` : '      ';
+      const qText = `(${displayAnswer}) ${i + 1}. ${m.question}`;
       
       children.push(new Paragraph({
         children: [
-          new TextRun({ text: qText, size: 24 }) // size 24 = 12pt
+          new TextRun({ text: qText, size: docxSize })
         ],
         spacing: { after: 200 }
       }));
 
-      if (m.image_uri) {
+      if (m.image_uri && m.needs_image) {
         try {
           const base64Data = await FileSystem.readAsStringAsync(m.image_uri, { encoding: 'base64' });
           children.push(new Paragraph({
@@ -104,14 +116,7 @@ export const exportToWord = async (mistakes, includeSolution = false) => {
       if (includeSolution && m.solution) {
         children.push(new Paragraph({
           children: [
-            new TextRun({ text: "【解答與解析】", bold: true, color: "27ae60", size: 22 })
-          ],
-          spacing: { before: 100, after: 100 }
-        }));
-        
-        children.push(new Paragraph({
-          children: [
-            new TextRun({ text: m.solution, color: "2c3e50", size: 22 })
+            new TextRun({ text: m.solution, color: "FF0000", size: docxSize })
           ],
           spacing: { after: 800 } // Larger spacing after solution
         }));

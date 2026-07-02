@@ -15,8 +15,10 @@ export const initializeDatabase = async (db) => {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         subject TEXT,
         question TEXT,
+        answer TEXT,
         solution TEXT,
         image_uri TEXT,
+        needs_image INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         is_exported INTEGER DEFAULT 0
       );
@@ -27,6 +29,18 @@ export const initializeDatabase = async (db) => {
     if (!hasIsExported) {
       await db.execAsync(`ALTER TABLE mistakes ADD COLUMN is_exported INTEGER DEFAULT 0;`);
       console.log("Added is_exported column to existing mistakes table");
+    }
+
+    const hasAnswer = tableInfo.some(column => column.name === 'answer');
+    if (!hasAnswer) {
+      await db.execAsync(`ALTER TABLE mistakes ADD COLUMN answer TEXT;`);
+      console.log("Added answer column to existing mistakes table");
+    }
+
+    const hasNeedsImage = tableInfo.some(column => column.name === 'needs_image');
+    if (!hasNeedsImage) {
+      await db.execAsync(`ALTER TABLE mistakes ADD COLUMN needs_image INTEGER DEFAULT 0;`);
+      console.log("Added needs_image column to existing mistakes table");
     }
 
     console.log("Database initialized successfully via Provider");
@@ -53,10 +67,10 @@ export const deleteColorRule = async (db, id) => {
 };
 
 // CRUD for mistakes
-export const addMistake = async (db, subject, question, solution, imageUri) => {
+export const addMistake = async (db, subject, question, answer, solution, imageUri, needsImage = 0) => {
   const result = await db.runAsync(
-    'INSERT INTO mistakes (subject, question, solution, image_uri) VALUES (?, ?, ?, ?)',
-    subject, question, solution, imageUri
+    'INSERT INTO mistakes (subject, question, answer, solution, image_uri, needs_image) VALUES (?, ?, ?, ?, ?, ?)',
+    subject, question, answer, solution, imageUri, needsImage ? 1 : 0
   );
   return result.lastInsertRowId;
 };
@@ -67,6 +81,13 @@ export const getMistakes = async (db) => {
 
 export const updateMistakeSolution = async (db, id, newSolution) => {
   await db.runAsync('UPDATE mistakes SET solution = ? WHERE id = ?', newSolution, id);
+};
+
+export const updateMistakeDetails = async (db, id, subject, question, answer, solution, needsImage) => {
+  await db.runAsync(
+    'UPDATE mistakes SET subject = ?, question = ?, answer = ?, solution = ?, needs_image = ? WHERE id = ?', 
+    subject, question, answer, solution, needsImage ? 1 : 0, id
+  );
 };
 
 export const deleteMistakes = async (db, ids) => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Alert, ScrollView, Modal } from 'react-native';
 import { getMistakes, deleteMistakes, markMistakesAsExported } from '../db/database';
 import { useIsFocused } from '@react-navigation/native';
 import { exportToPDF, exportToWord } from '../utils/exportTools';
@@ -15,6 +15,12 @@ export default function MistakeListScreen({ navigation }) {
   const [subjectFilter, setSubjectFilter] = useState('All');
   
   const isFocused = useIsFocused();
+
+  // Export Settings Modal State
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [exportTarget, setExportTarget] = useState('pdf');
+  const [exportFontSize, setExportFontSize] = useState(16);
+  const [exportIncludeSolution, setExportIncludeSolution] = useState(false);
 
   useEffect(() => {
     if (isFocused) {
@@ -107,72 +113,30 @@ export default function MistakeListScreen({ navigation }) {
     }
   };
 
-  const handleExportPDF = () => {
+  const openExportModal = (target) => {
     const itemsToExport = mistakes.filter(m => selectedIds.has(m.id));
     if (itemsToExport.length === 0) return Alert.alert('提示', '請先勾選要匯出的錯題。');
-    const exportedIds = itemsToExport.map(m => m.id);
-    
-    Alert.alert(
-      '選擇匯出格式',
-      '請選擇您要匯出的考卷類型：',
-      [
-        { 
-          text: '僅題目 (練習用)', 
-          onPress: async () => {
-            try { 
-              await exportToPDF(itemsToExport, false); 
-              await handleExportSuccess(exportedIds);
-            } 
-            catch (error) { Alert.alert('匯出錯誤', error.message); }
-          }
-        },
-        { 
-          text: '包含解答 (複習用)', 
-          onPress: async () => {
-            try { 
-              await exportToPDF(itemsToExport, true); 
-              await handleExportSuccess(exportedIds);
-            } 
-            catch (error) { Alert.alert('匯出錯誤', error.message); }
-          }
-        },
-        { text: '取消', style: 'cancel' },
-      ]
-    );
+    setExportTarget(target);
+    setExportFontSize(target === 'pdf' ? 16 : 12); // Default sizes
+    setExportIncludeSolution(false);
+    setExportModalVisible(true);
   };
 
-  const handleExportWord = () => {
+  const handleConfirmExport = async () => {
+    setExportModalVisible(false);
     const itemsToExport = mistakes.filter(m => selectedIds.has(m.id));
-    if (itemsToExport.length === 0) return Alert.alert('提示', '請先勾選要匯出的錯題。');
     const exportedIds = itemsToExport.map(m => m.id);
     
-    Alert.alert(
-      '選擇匯出格式',
-      '請選擇您要匯出的考卷類型：',
-      [
-        { 
-          text: '僅題目 (練習用)', 
-          onPress: async () => {
-            try { 
-              await exportToWord(itemsToExport, false); 
-              await handleExportSuccess(exportedIds);
-            } 
-            catch (error) { Alert.alert('匯出錯誤', error.message); }
-          }
-        },
-        { 
-          text: '包含解答 (複習用)', 
-          onPress: async () => {
-            try { 
-              await exportToWord(itemsToExport, true); 
-              await handleExportSuccess(exportedIds);
-            } 
-            catch (error) { Alert.alert('匯出錯誤', error.message); }
-          }
-        },
-        { text: '取消', style: 'cancel' },
-      ]
-    );
+    try {
+      if (exportTarget === 'pdf') {
+        await exportToPDF(itemsToExport, exportIncludeSolution, exportFontSize);
+      } else {
+        await exportToWord(itemsToExport, exportIncludeSolution, exportFontSize);
+      }
+      await handleExportSuccess(exportedIds);
+    } catch (error) {
+      Alert.alert('匯出錯誤', error.message);
+    }
   };
 
   const renderItem = ({ item }) => {
@@ -250,10 +214,10 @@ export default function MistakeListScreen({ navigation }) {
         </View>
       </View>
       <View style={styles.exportHeader}>
-        <TouchableOpacity style={styles.exportButton} onPress={handleExportPDF}>
+        <TouchableOpacity style={styles.exportButton} onPress={() => openExportModal('pdf')}>
           <Text style={styles.exportButtonText}>匯出 PDF</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.exportButton, styles.wordButton]} onPress={handleExportWord}>
+        <TouchableOpacity style={[styles.exportButton, styles.wordButton]} onPress={() => openExportModal('word')}>
           <Text style={[styles.exportButtonText, styles.wordButtonText]}>匯出 Word</Text>
         </TouchableOpacity>
       </View>
@@ -266,6 +230,65 @@ export default function MistakeListScreen({ navigation }) {
         contentContainerStyle={styles.listContent}
       />
       <Text style={styles.hintText}>💡 輕點選擇，長按可查看詳情</Text>
+
+      {/* Export Settings Modal */}
+      <Modal visible={exportModalVisible} transparent={true} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>匯出設定 ({exportTarget === 'pdf' ? 'PDF' : 'Word'})</Text>
+            
+            <View style={styles.modalSection}>
+              <Text style={styles.modalSectionTitle}>考卷類型</Text>
+              <View style={styles.toggleRow}>
+                <TouchableOpacity 
+                  style={[styles.toggleBtn, !exportIncludeSolution && styles.toggleBtnActive]}
+                  onPress={() => setExportIncludeSolution(false)}
+                >
+                  <Text style={[styles.toggleBtnText, !exportIncludeSolution && styles.toggleBtnTextActive]}>練習卷 (僅題目)</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.toggleBtn, exportIncludeSolution && styles.toggleBtnActive]}
+                  onPress={() => setExportIncludeSolution(true)}
+                >
+                  <Text style={[styles.toggleBtnText, exportIncludeSolution && styles.toggleBtnTextActive]}>複習卷 (含解答)</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.modalSection}>
+              <Text style={styles.modalSectionTitle}>字型大小: {exportFontSize}</Text>
+              <View style={styles.sizeControlRow}>
+                <TouchableOpacity style={styles.sizeBtn} onPress={() => setExportFontSize(Math.max(10, exportFontSize - 2))}>
+                  <Text style={styles.sizeBtnText}>A-</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.sizeBtn} onPress={() => setExportFontSize(Math.min(36, exportFontSize + 2))}>
+                  <Text style={styles.sizeBtnText}>A+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.previewBox}>
+              <Text style={{ fontSize: exportFontSize, color: '#333' }}>
+                ( {exportIncludeSolution ? 'C' : ' '} ) 1. 這是一段字型預覽測試文字，您可以調整大小來尋找最適合的排版。
+              </Text>
+              {exportIncludeSolution && (
+                <Text style={{ fontSize: exportFontSize, color: '#e74c3c', marginTop: 10 }}>
+                  這是一段紅色解析預覽文字。
+                </Text>
+              )}
+            </View>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setExportModalVisible(false)}>
+                <Text style={styles.modalCancelBtnText}>取消</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalConfirmBtn} onPress={handleConfirmExport}>
+                <Text style={styles.modalConfirmBtnText}>確認匯出</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -409,4 +432,23 @@ const styles = StyleSheet.create({
   question: { fontSize: 14, color: '#34495e', lineHeight: 20 },
   emptyText: { textAlign: 'center', marginTop: 40, color: '#95a5a6', fontSize: 16 },
   hintText: { textAlign: 'center', color: '#95a5a6', fontSize: 12, marginBottom: 16 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '85%', maxWidth: 400 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#2c3e50', marginBottom: 20, textAlign: 'center' },
+  modalSection: { marginBottom: 20 },
+  modalSectionTitle: { fontSize: 16, color: '#7f8c8d', marginBottom: 10, fontWeight: '600' },
+  toggleRow: { flexDirection: 'row', gap: 10 },
+  toggleBtn: { flex: 1, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#bdc3c7', alignItems: 'center' },
+  toggleBtnActive: { backgroundColor: '#3498db', borderColor: '#3498db' },
+  toggleBtnText: { color: '#7f8c8d', fontWeight: 'bold' },
+  toggleBtnTextActive: { color: '#fff' },
+  sizeControlRow: { flexDirection: 'row', gap: 16, justifyContent: 'center' },
+  sizeBtn: { backgroundColor: '#ecf0f1', paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8 },
+  sizeBtnText: { fontSize: 18, fontWeight: 'bold', color: '#2c3e50' },
+  previewBox: { backgroundColor: '#f9f9f9', padding: 16, borderRadius: 8, borderWidth: 1, borderColor: '#eee', marginBottom: 24, minHeight: 120 },
+  modalFooter: { flexDirection: 'row', gap: 12 },
+  modalCancelBtn: { flex: 1, padding: 14, borderRadius: 8, backgroundColor: '#ecf0f1', alignItems: 'center' },
+  modalCancelBtnText: { color: '#7f8c8d', fontWeight: 'bold', fontSize: 16 },
+  modalConfirmBtn: { flex: 1, padding: 14, borderRadius: 8, backgroundColor: '#2ecc71', alignItems: 'center' },
+  modalConfirmBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
 });

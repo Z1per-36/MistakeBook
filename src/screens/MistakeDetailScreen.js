@@ -1,9 +1,40 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, TextInput, Switch, Alert } from 'react-native';
 import Markdown from 'react-native-markdown-display';
+import { useSQLiteContext } from 'expo-sqlite';
+import { updateMistakeDetails } from '../db/database';
 
 export default function MistakeDetailScreen({ route, navigation }) {
+  const db = useSQLiteContext();
   const { mistake } = route.params;
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [answer, setAnswer] = useState(mistake.answer || '');
+  const [needsImage, setNeedsImage] = useState(mistake.needs_image === 1);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={handleSaveToggle} style={styles.headerButton}>
+          <Text style={styles.headerButtonText}>{isEditing ? "儲存" : "編輯"}</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [isEditing, answer, needsImage]);
+
+  const handleSaveToggle = async () => {
+    if (isEditing) {
+      try {
+        await updateMistakeDetails(db, mistake.id, mistake.subject, mistake.question, answer, mistake.solution, needsImage);
+        mistake.answer = answer;
+        mistake.needs_image = needsImage ? 1 : 0;
+        Alert.alert("成功", "已更新儲存！");
+      } catch (error) {
+        Alert.alert("錯誤", "儲存失敗");
+      }
+    }
+    setIsEditing(!isEditing);
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
@@ -14,6 +45,34 @@ export default function MistakeDetailScreen({ route, navigation }) {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>科目</Text>
         <Text style={styles.cardContent}>{mistake.subject}</Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>正確答案</Text>
+        {isEditing ? (
+          <TextInput
+            style={styles.input}
+            value={answer}
+            onChangeText={setAnswer}
+            placeholder="請輸入答案"
+          />
+        ) : (
+          <Text style={styles.cardContent}>{answer || "(未設定答案)"}</Text>
+        )}
+      </View>
+
+      <View style={styles.card}>
+        <View style={styles.switchRow}>
+          <Text style={styles.cardTitle}>匯出時附上原圖</Text>
+          <Switch
+            value={needsImage}
+            onValueChange={setNeedsImage}
+            disabled={!isEditing}
+          />
+        </View>
+        <Text style={styles.hintText}>
+          {needsImage ? "✅ 匯出考卷時將會印出圖片" : "📝 純文字題，匯出時不印圖片"}
+        </Text>
       </View>
 
       <View style={styles.card}>
@@ -60,6 +119,27 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   chatButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
+  headerButton: { marginRight: 15 },
+  headerButtonText: { color: '#3498db', fontSize: 16, fontWeight: 'bold' },
+  input: {
+    borderWidth: 1,
+    borderColor: '#bdc3c7',
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 16,
+    color: '#2c3e50',
+  },
+  switchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  hintText: {
+    fontSize: 13,
+    color: '#7f8c8d',
+    marginTop: 4,
+  },
 });
 
 const markdownStyles = {
